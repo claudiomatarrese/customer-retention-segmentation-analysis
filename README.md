@@ -1,91 +1,101 @@
-## Customer Retention & Segmentation Analysis
+# Customer Retention & Segmentation
 
-![Customer Retention Dashboard](images/customer_retention_preview.png)
+![Dashboard preview](images/customer_retention_preview.png)
 
-Sample page from the Power BI dashboard – Cohort Retention Analysis
+## Background
 
+An online retailer wants to know how many of its customers come back after the first order, and which valuable customers have stopped buying. This project answers those two questions with SQL and a two-page Power BI dashboard.
 
-## Project Overview
+## Questions
 
-This project analyzes the use of transaction data for analyzing customer retention and purchasing behaviour for an online retailer.
+1. How many customers order more than once?
+2. Of the customers who start in a given month, how many come back in the following months?
+3. How are customers split by spend and by how recently they ordered?
+4. Which countries bring the most customers and revenue?
 
-Cohort analysis and RFM segmentation were implemented in SQL, with insights delivered through interactive Power BI dashboards.
+## Data
 
+- **Source:** [Online Retail II](https://archive.ics.uci.edu/dataset/502/online+retail+ii), UCI Machine Learning Repository
+- **Period:** 1 December 2009 to 9 December 2011
+- **Size:** about 1.07 million rows, one row per product on an invoice
+- **Fields:** invoice, product, quantity, price, date, customer ID, country
 
-## Dataset Description
+The raw file is not in this repository because it is too large.
 
-This dataset includes prior transaction information, covering:
-- Invoice-level records
-- Customer identifiers
-- Transaction timestamps
-- Product quantities and unit prices
-- Customer country information
+**Rows removed during cleaning:** cancelled invoices, rows with zero or negative quantity or price, and rows with no customer ID. Because of the last rule, all figures cover orders from identified customers only.
 
-Each row represents a single product purchased within an invoice. Customers can place multiple orders over time.
+## What I did
 
-The raw dataset is not included in this repository due to file size limitations.
+The data is prepared in PostgreSQL with five scripts, to be run in this order:
 
+| File | What it does |
+|---|---|
+| `00_schema.sql` | Creates the schema and the empty raw table |
+| `01_data_cleaning.sql` | Cleaned order lines with revenue per line |
+| `02_customer_base.sql` | One row per customer: first and last order, number of orders, total revenue |
+| `03_cohort_retention.sql` | Retention by first-order month and months since the first order |
+| `04_rfm_light.sql` | Groups customers by recency, number of orders and spend |
 
-## Business Questions
+The groups in `04_rfm_light.sql` are:
 
-The analysis addresses the following questions:
-- How many customers return after their first purchase?
-- How does retention evolve over time for different acquisition cohorts?
-- How are customers distributed by recency, frequency, and monetary value?
-- How is total revenue concentrated across customer segments?
-- How are customers and revenue distributed across countries?
+- **Last order:** 0–30 days, 31–90 days, 90+ days before the last date in the data
+- **Number of orders:** 1, 2–4, 5+
+- **Total spend:** under £250, £250–£1,000, over £1,000
 
+Power BI reads three of the views: `customer_orders_clean_v`, `cohort_retention_v` and `rfm_light_v`.
 
-## SQL Data Pipeline
+## The dashboard
 
-Data preparation and modeling were performed entirely in SQL using a layered approach:
-- Raw transactional data ingestion
-- Data cleaning and normalization
-- Transaction-level revenue calculation
-- Customer-level aggregation
-- Cohort retention table creation
-- RFM (Recency, Frequency, Monetary) feature calculation
+The report has two pages. A PDF copy is in the `powerbi/` folder.
 
-Key SQL views include:
+**Overview**
+- Four numbers at the top: total revenue, customers, share of customers who ordered more than once, and high-value customers with no order in 90+ days
+- Revenue by month
+- A cohort table. Each row is the group of customers who made their first purchase in that month. Each column shows the share of that group who ordered again that many months later (0 is the first month, so it is always 100%).
 
-- `online_retail_customer_orders_clean_v`: cleaned transaction-level data with calculated line revenue
-- `online_retail_customer_base_v`: customer-level aggregates (orders, revenue, recency)
-- `online_retail_cohort_retention_v`: cohort-based retention metrics by acquisition month
-- `online_retail_rfm_light_v`: customer segmentation variables based on RFM logic
+**Customers & markets**
+- Customers by spend and last order
+- Customers by number of orders
+- Top 5 countries by revenue
+- A short list of key points
 
+## Main findings
 
-## Power BI Dashboard Pages
+- Total revenue is £17.4M from 5,878 customers.
+- 72.4% of customers ordered more than once, and 2,161 customers (37%) placed 5 or more orders.
+- 842 customers who spent over £1,000 have not ordered in the last 90 days. Together they spent £2.58M.
+- In the cohort table, retention drops after the first month in every cohort. After that it moves between roughly 10% and 40%.
+- The UK brings 83% of revenue (£14.4M). EIRE and the Netherlands have very few customers (5 and 22) but rank second and third by revenue.
 
-The Power BI report is structured into four pages:
+## Suggested next steps
 
-1. **Customer Retention (Cohort Analysis)**  
-	Shows tables representing the percentage of customers who returned to purchase in the following months after their initial purchase separated into cohorts based on their purchase month.
-	
-2. **Business Overview**  
-	Displays four of the global KPI metrics from the report: Total Revenue, Total Orders, Total Customers, and Average Order value.
-	
-3. **Customer Segmentation (RFM)**  
-	Allows exploration of customers on a per-customer basis with Recency, Frequency and Money Buckets as well as interactive filters and a detailed customer table. 
+1. Contact the 842 high-value customers who stopped ordering (for example with an offer or a reminder email).
+2. Look at what the repeat customers have in common and try to get more first-time customers to order a second time.
+3. Look at why EIRE and the Netherlands bring so much revenue from so few customers (for example very large orders).
 
-4. **Customer Distribution**  
-	Comparing customer counts and total revenue across countries using bar charts for each market's top customers.
-	
-A static PDF version of the dashboard is available in the `powerbi/` folder.
+## Limits
 
-## Key Observations
+- The data ends on 9 December 2011, so December 2011 is only a partial month.
+- Customers without an ID are not included.
+- "Inactive" is counted from the last order date in the data, not from today.
 
-- Each cohort's retention rate declines after the first purchase.
-- Monthly cohorts have their own distinct retention rates by month.
-- Customer revenues are not evenly distributed between customers, as a subset of them produces a disproportionately large amount of total revenue.
-- The countries with the largest number of customers do not necessarily equate to those who produce the most total revenue.
+## Repository
 
+- `sql/`: the five SQL scripts
+- `powerbi/`: the Power BI file and a PDF copy of the dashboard
+- `images/`: the preview image used above
 
-## Tools & Technologies
+## How to rebuild
 
-- **SQL**: data cleaning, aggregation, cohort retention calculation, RFM feature engineering  
-- **Power BI**: data modeling, DAX measures, interactive dashboards  
+1. Create a database and run `00_schema.sql`.
+2. Load the data into `online_retail.raw_online_retail`.
+3. Run `01` to `04` in order.
+4. Open the Power BI file and refresh.
 
+## Tools
 
-## Project Purpose
+PostgreSQL, Power BI Desktop
 
-The objective of this project is to create a sample of work that will be included in my professional portfolio. The work demonstrates that I’ve developed the requisite skills to prepare data, analyze customer acquisition and behavior, & develop visualizations that are beneficial for business decision-making.
+## Note
+
+This is a portfolio project. The client scenario is made up, and the data is a public dataset.
