@@ -1,3 +1,7 @@
+-- 02_customer_base.sql
+-- One row per customer: first and last purchase date,
+-- number of orders (distinct invoices) and total revenue.
+
 CREATE OR REPLACE VIEW online_retail.customer_base_v AS
 SELECT
   customer_id,

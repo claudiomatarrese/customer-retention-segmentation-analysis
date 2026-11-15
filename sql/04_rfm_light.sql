@@ -1,3 +1,11 @@
+-- 04_rfm_light.sql
+-- Simple RFM segmentation (recency, frequency, monetary), one row per customer.
+--
+-- Recency is measured from the latest invoice date in the data, not from today.
+--   Recency:   R1 = 0-30 days, R2 = 31-90 days, R3 = 90+ days since last order
+--   Frequency: F1 = 1 order,   F2 = 2-4 orders, F3 = 5+ orders
+--   Monetary:  M1 = under 250, M2 = 250 to 1,000, M3 = 1,000 or more (total spend)
+
 CREATE OR REPLACE VIEW online_retail.rfm_light_v AS
 WITH as_of AS (
   SELECT COALESCE(MAX(invoice_date)::date, CURRENT_DATE) AS as_of_date

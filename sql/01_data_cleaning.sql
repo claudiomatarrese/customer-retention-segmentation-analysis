@@ -1,3 +1,14 @@
+-- 01_data_cleaning.sql
+-- Cleaned transaction lines (one row per product line on an invoice).
+--
+-- Rows removed:
+--   * missing invoice number
+--   * cancelled invoices (invoice number starts with 'C')
+--   * zero or negative quantity or price
+--   * rows without a customer ID
+--
+-- line_revenue = quantity * price
+
 CREATE OR REPLACE VIEW online_retail.customer_orders_clean_v AS
 SELECT
   invoice,
